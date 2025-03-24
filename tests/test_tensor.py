@@ -51,3 +51,4 @@ def test_addition(pair):
     assert np.allclose(result.items, expected.items, atol=1e-8), (
         f"Value mismatch:\nResult: {result.items}\nExpected: {expected.items}"
     )
+

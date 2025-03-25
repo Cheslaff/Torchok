@@ -29,9 +29,9 @@ class Tensor:
         match other:
             case Tensor():
                 return Tensor(op(self.items, other.items))
-            case _ if isinstance(other, np.ndarray):  # crutch used since np.array aint type
+            case _ if isinstance(other, np.ndarray):  # np.array aint type
                 return Tensor(op(self.items, other))
-            case list():
+            case list() | tuple():
                 return Tensor(op(self.items, np.array(other)))
             
         # Scalars section
@@ -42,12 +42,6 @@ class Tensor:
     
     def __mul__(self, other: Any) -> 'Tensor':
         return self._match_optypes(other, lambda x, y: x * y)
-    
-    def __radd__(self, other: Any) -> 'Tensor':
-        return self + other
-    
-    def __rmul__(self, other: Any) -> 'Tensor':
-        return self * other
     
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Tensor):
@@ -62,6 +56,15 @@ class Tensor:
         
     def __getitem__(self, index: int) -> 'Tensor':
         return Tensor(self.items[index])
+
+    def __radd__(self, other: Any) -> 'Tensor':
+        return self + other
+
+    def __rmul__(self, other: Any) -> 'Tensor':
+        return self * other
+    
+    def __rmatmul__(self, other: Any) -> 'Tensor':
+        return self @ other
     
     @property
     def T(self) -> 'Tensor':

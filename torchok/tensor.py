@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Iterable, Callable, Any
+from typing import Iterable, Callable, Any, Tuple
 
 
 class Tensor:
@@ -10,6 +10,10 @@ class Tensor:
 
     Attributes:
         items (np.ndarray): np.array() of items sequence.
+    
+    Properties:
+        T: returns transpose of tensor
+        shape: returns Tensor shape tuple
 
     Examples:
         >>> tensor = Tensor([1, 2, 3])
@@ -50,8 +54,22 @@ class Tensor:
             return np.allclose(self.items, other.items)
         return False
 
+    def __matmul__(self, other: Any) -> 'Tensor':
+        try:
+            return self._match_optypes(other, lambda x, y: x @ y)
+        except ValueError:
+            raise ValueError("Shape mismatch error")
+        
+    def __getitem__(self, index: int) -> 'Tensor':
+        return Tensor(self.items[index])
     
+    @property
+    def T(self) -> 'Tensor':
+        return Tensor(self.items.T)
+    
+    @property
+    def shape(self) -> Tuple:
+        return self.items.shape
+
     def __repr__(self):
         return f"torchok.Tensor({self.items})"
-    
-    

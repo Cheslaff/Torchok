@@ -21,24 +21,21 @@ class Tensor:
         >>> scalar = 1.4
         >>> (tensor + arr) * scalar  # torchok.Tensor([4.2 7.  9.8])
     """
-    def __init__(self, items: Iterable) -> None:
+    def __init__(self, items: Iterable, requires_grad=False) -> None:
         self.items = items if isinstance(items, np.ndarray) else np.array(items)
+        self.requires_grad = requires_grad
+        self.parents = tuple()
+        self.function = None
+        self.grad = None
 
     def _match_optypes(self, other: Any, op: Callable) -> 'Tensor':
         # Iterables section
-        match other:
-            case Tensor():
-                return Tensor(op(self.items, other.items))
-            case _ if isinstance(other, np.ndarray):  # np.array aint type
-                return Tensor(op(self.items, other))
-            case list() | tuple():
-                return Tensor(op(self.items, np.array(other)))
-            
-        # Scalars section
-        return Tensor(op(self.items, other))
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return op(self, other)
 
     def __add__(self, other: Any) -> 'Tensor':
-        return self._match_optypes(other, lambda x, y: x + y)
+        from autogradik.functions import Add
+        return self._match_optypes(other, Add.forward)
     
     def __mul__(self, other: Any) -> 'Tensor':
         return self._match_optypes(other, lambda x, y: x * y)
@@ -76,3 +73,9 @@ class Tensor:
 
     def __repr__(self):
         return f"torchok.Tensor({self.items})"
+
+
+a = Tensor([1, 2, 3], requires_grad=True)
+b = -1
+c = a + b
+print(c)

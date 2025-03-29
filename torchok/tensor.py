@@ -27,6 +27,7 @@ class Tensor:
         self.parents = tuple()
         self.function = None
         self.grad = None
+        self._id = id(self)
 
     def _match_optypes(self, other: Any, op: Callable) -> 'Tensor':
         # Iterables section
@@ -43,6 +44,14 @@ class Tensor:
     def __mul__(self, other: Any) -> 'Tensor':
         from autogradik.functions import Mul
         return self._match_optypes(other, Mul.forward)
+    
+    def __truediv__(self, other: Any) -> 'Tensor':
+        from autogradik.functions import Div
+        return self._match_optypes(other, Div.forward)
+
+    def __pow__(self, power: int) -> 'Tensor':
+        from autogradik.functions import Pow
+        return self._match_optypes(power, Pow.forward)
     
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Tensor):
@@ -67,6 +76,9 @@ class Tensor:
     def __rmatmul__(self, other: Any) -> 'Tensor':
         return self @ other
     
+    def __hash__(self):
+        return self._id
+    
     @property
     def T(self) -> 'Tensor':
         return Tensor(self.items.T)
@@ -77,4 +89,49 @@ class Tensor:
 
     def __repr__(self):
         return f"torchok.Tensor({self.items})"
- 
+    
+    def astype(self, dtype):
+        self.items = self.items.astype(dtype)
+        return self
+    
+    def sum(self, axis=None) -> 'Tensor':
+        return Tensor(np.sum(self.items, axis=axis))
+    
+    def backward(self):
+        self.grad = Tensor(np.ones(self.shape))
+
+        visited = set()
+        topo = []
+
+        def _build_topo(tensor):
+            if tensor not in visited:
+                visited.add(tensor)
+                for parent in tensor.parents:
+                    _build_topo(parent)
+                topo.append(tensor)
+        _build_topo(self)
+
+        topo.reverse()
+
+        for tensor in topo:
+            if tensor.function is None or not tensor.parents:
+                continue
+
+            
+            parent_grads = tensor.function.backward(tensor.grad, *tensor.parents)
+
+            
+            for parent, p_grad in zip(tensor.parents, parent_grads):
+                if parent.requires_grad:
+                    if parent.grad is None:
+                        parent.grad = p_grad
+                    else:
+                        parent.grad += p_grad
+
+
+"""a = Tensor([1, 2, 3], requires_grad=True)
+b = 3
+x = a ** b
+x.grad = Tensor(np.ones(x.shape))
+der_a = x.function.backward(x.grad, *x.parents)
+print(der_a)"""

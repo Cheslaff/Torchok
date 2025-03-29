@@ -37,8 +37,12 @@ class Tensor:
         from autogradik.functions import Add
         return self._match_optypes(other, Add.forward)
     
+    def __sub__(self, other: Any) -> 'Tensor':
+        return self + (other * -1)
+    
     def __mul__(self, other: Any) -> 'Tensor':
-        return self._match_optypes(other, lambda x, y: x * y)
+        from autogradik.functions import Mul
+        return self._match_optypes(other, Mul.forward)
     
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Tensor):
@@ -74,8 +78,3 @@ class Tensor:
     def __repr__(self):
         return f"torchok.Tensor({self.items})"
 
-
-a = Tensor([1, 2, 3], requires_grad=True)
-b = -1
-c = a + b
-print(c)

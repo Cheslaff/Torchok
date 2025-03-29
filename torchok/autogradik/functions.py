@@ -3,41 +3,45 @@ from typing import Any
 
 
 class Add:
-    def forward(self, a, b) -> 'Tensor':
+    @staticmethod
+    def forward(a, b) -> 'Tensor':
         from torchok.tensor import Tensor
         out = Tensor(a.items + b.items)
-        
-        self.a = a.items
-        self.b = b.items
 
         if a.requires_grad or b.requires_grad:
             out.parents = (a, b)
-            out.function = self
+            out.function = Add()
         
         return out
     
-    def backward(self, out_grad) -> tuple:
+    @staticmethod
+    def backward(out_grad, a, b) -> tuple:
         grad_a = out_grad
         grad_b = out_grad
         return grad_a, grad_b
     
 
 class Mul:
-    def forward(self, a, b) -> 'Tensor':
+    @staticmethod
+    def forward(a, b) -> 'Tensor':
         from torchok.tensor import Tensor
         out = Tensor(a.items * b.items)
-        
-        self.a = a.items
-        self.b = b.items
 
         if a.requires_grad or b.requires_grad:
             out.parents = (a, b)
-            out.function = self
+            out.function = Mul()
         
         return out
     
-    def backward(self, out_grad) -> tuple:
-        grad_a = self.a * out_grad
-        grad_b = self.b * out_grad
+    @staticmethod
+    def backward(out_grad, a, b) -> tuple:
+        grad_a = b * out_grad
+        grad_b = a * out_grad
+
+        # Sum gradients if original tensors were scalars
+        if len(a.shape) == 0:
+            grad_a = grad_a.items.sum()
+        if len(b.shape) == 0:
+            grad_b = grad_b.items.sum()
+
         return grad_a, grad_b
-    

@@ -45,3 +45,4 @@ class Mul:
             grad_b = grad_b.items.sum()
 
         return grad_a, grad_b
+ 

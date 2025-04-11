@@ -1,98 +1,151 @@
-# from __future__ import annotations
-from typing import Any
 import numpy as np
 
+
 class Add:
-    @staticmethod
-    def forward(a, b) -> 'Tensor':
+    def forward(self, a, b):
         from torchok.tensor import Tensor
-        out = Tensor(a.items + b.items)
-
+        if isinstance(b, (int, float)): b = Tensor(b)
+        self.a = a
+        self.b = b
+        self.out = Tensor(a.items + b.items)
         if a.requires_grad or b.requires_grad:
-            out.parents = (a, b)
-            out.function = Add()
-            out.requires_grad = True
-        
-        return out
+            self.out.prev = (a, b)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
     
-    @staticmethod
-    def backward(out_grad, a, b) -> tuple:
-        grad_a = out_grad
-        grad_b = out_grad
-
-        if len(a.shape) == 0:
-            grad_a = grad_a.sum()  # Now returns a Tensor
-        if len(b.shape) == 0:
-            grad_b = grad_b.sum()
-
-        return grad_a, grad_b
+    def backward(self):
+        if self.a.requires_grad:
+            self.a.grad += self.out.grad
+        if self.b.requires_grad:
+            grad_b = self.out.grad
+            while grad_b.ndim > self.b.grad.ndim:
+                grad_b = grad_b.sum(axis=0)
+            self.b.grad += grad_b
     
+    def __repr__(self):
+        return "Add"
+
 
 class Mul:
-    @staticmethod
-    def forward(a, b) -> 'Tensor':
+    def forward(self, a, b):
         from torchok.tensor import Tensor
-        out = Tensor(a.items * b.items)
-
+        if isinstance(b, (int, float)): b = Tensor(b)
+        self.out = Tensor(a.items * b.items)
         if a.requires_grad or b.requires_grad:
-            out.parents = (a, b)
-            out.function = Mul()
-            out.requires_grad = True
-        
-        return out
+            self.out.prev = (a, b)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
     
-    @staticmethod
-    def backward(out_grad, a, b) -> tuple:
-        grad_a = b * out_grad
-        grad_b = a * out_grad
+    def backward(self):
+        a, b = self.out.prev
+        if a.requires_grad:
+            a.grad += b.items * self.out.grad
+        if b.requires_grad:
+            b.grad += a.items * self.out.grad
 
-        # Sum gradients if original tensors were scalars
-        if len(a.shape) == 0:
-            grad_a = grad_a.sum()
-        if len(b.shape) == 0:
-            grad_b = grad_b.sum()
+    def __repr__(self):
+        return "Mul"
 
-        return grad_a, grad_b
+class Sub:
+    def forward(self, a, b):
+        from torchok.tensor import Tensor
+        if isinstance(b, (int, float)): b = Tensor(b)
+        self.out = Tensor(a.items - b.items)
+        if a.requires_grad or b.requires_grad:
+            self.out.prev = (a, b)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
+    
+    def backward(self):
+        a, b = self.out.prev
+        if a.requires_grad:
+            a.grad += self.out.grad
+        if b.requires_grad:
+            b.grad -= self.out.grad
 
+    def __repr__(self):
+        return "Sub"
 
 class Pow:
-    @staticmethod
-    def forward(a, b) -> 'Tensor':
+    def forward(self, a, b: int):
         from torchok.tensor import Tensor
-        out = Tensor(a.items ** b.items)
+        self.exp = b
+        self.a = a
+        self.out = Tensor(a.items ** b)
         if a.requires_grad:
-            out.parents = (a, b)
-            out.function = Pow()
-            out.requires_grad = True
+            self.out.prev = (a,)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
 
-        return out
-    
-    @staticmethod
-    def backward(out_grad, a, b) -> tuple:
-        grad_a = b * (a ** (b - 1)) * out_grad
-        if len(a.shape) == 0:
-            grad_a = grad_a.sum()
-        return grad_a
+    def backward(self):
+        if self.a.requires_grad:
+            grad = self.exp * (self.a.items ** (self.exp - 1)) * self.out.grad
+            self.a.grad += grad
 
+    def __repr__(self):
+        return "Pow"
 
 class Div:
-    @staticmethod
-    def forward(a, b) -> 'Tensor':
+    def forward(self, a, b):
         from torchok.tensor import Tensor
-        out = Tensor(a.items / b.items)
+        if isinstance(b, (int, float)): b = Tensor(b)
+        self.out = Tensor(a.items / b.items)
         if a.requires_grad or b.requires_grad:
-            out.parents = (a, b)
-            out.function = Div()
-            out.requires_grad = True
-        return out
+            self.out.prev = (a, b)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
+    
+    def backward(self):
+        a, b = self.out.prev
+        grad = self.out.grad
+        if a.requires_grad:
+            a.grad += grad / b.items
+        if b.requires_grad:
+            b.grad -= (a.items / (b.items ** 2)) * grad
 
-    @staticmethod
-    def backward(out_grad, a, b) -> tuple:
-        grad_a = out_grad / b
-        grad_b = -1 * out_grad * a / (b ** 2)
-        
-        if len(a.shape) == 0:
-            grad_a = grad_a.sum()
-        if len(b.shape) == 0:
-            grad_b = grad_b.sum()
-        return grad_a, grad_b
+    def __repr__(self):
+        return "Div"
+
+class Matmul:
+    def forward(self, a, b):
+        from torchok.tensor import Tensor
+        self.out = Tensor(a.items @ b.items)
+        if a.requires_grad or b.requires_grad:
+            self.out.prev = (a, b)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
+    
+    def backward(self):
+        a, b = self.out.prev
+        grad = self.out.grad
+        if a.requires_grad:
+            a.grad += grad @ b.items.T
+        if b.requires_grad:
+            b.grad += a.items.T @ grad
+
+    def __repr__(self):
+        return "MatMul"
+
+class Sum:
+    def forward(self, a):
+        from torchok.tensor import Tensor
+        self.a = a
+        self.out = Tensor(np.array(a.items.sum()))
+        if a.requires_grad:
+            self.out.prev = (a,)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
+
+    def backward(self):
+        if self.a.requires_grad:
+            self.a.grad += np.ones_like(self.a.items) * self.out.grad
+
+    def __repr__(self):
+        return "Sum"

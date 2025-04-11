@@ -1,137 +1,92 @@
 import numpy as np
-from typing import Iterable, Callable, Any, Tuple
+from typing import List, Callable, Tuple
 
 
 class Tensor:
-    """torchok.Tensor class supporting arithmetic operations.
-
-    Args:
-        items (Iterable): Sequence of values in Tensor
-
-    Attributes:
-        items (np.ndarray): np.array() of items sequence.
-    
-    Properties:
-        T: returns transpose of tensor
-        shape: returns Tensor shape tuple
-
-    Examples:
-        >>> tensor = Tensor([1, 2, 3])
-        >>> arr = [2, 3, 4]
-        >>> scalar = 1.4
-        >>> (tensor + arr) * scalar  # torchok.Tensor([4.2 7.  9.8])
-    """
-    def __init__(self, items: Iterable, requires_grad=False) -> None:
-        self.items = items if isinstance(items, np.ndarray) else np.array(items)
+    def __init__(self, items:List, requires_grad=False, name=""):
+        self.items = np.array(items) if isinstance(items, list) else items
+        self.prev = set()
         self.requires_grad = requires_grad
-        self.parents = tuple()
+        self.grad = np.zeros_like(items, dtype=np.float64)
         self.function = None
-        self.grad = None
-        self._id = id(self)
+        self.name = name
 
-    def _match_optypes(self, other: Any, op: Callable) -> 'Tensor':
-        # Iterables section
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        return op(self, other)
-
-    def __add__(self, other: Any) -> 'Tensor':
+    def __add__(self, other) -> 'Tensor':
         from autogradik.functions import Add
-        return self._match_optypes(other, Add.forward)
+        add = Add()
+        return add.forward(self, other)
     
-    def __sub__(self, other: Any) -> 'Tensor':
-        return self + (other * -1)
-    
-    def __mul__(self, other: Any) -> 'Tensor':
+    def __mul__(self, other) -> 'Tensor':
         from autogradik.functions import Mul
-        return self._match_optypes(other, Mul.forward)
-    
-    def __truediv__(self, other: Any) -> 'Tensor':
-        from autogradik.functions import Div
-        return self._match_optypes(other, Div.forward)
-
-    def __pow__(self, power: int) -> 'Tensor':
-        from autogradik.functions import Pow
-        return self._match_optypes(power, Pow.forward)
-    
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, Tensor):
-            return np.allclose(self.items, other.items)
-        return False
-
-    def __matmul__(self, other: Any) -> 'Tensor':
-        try:
-            return self._match_optypes(other, lambda x, y: x @ y)
-        except ValueError:
-            raise ValueError("Shape mismatch error")
+        mul = Mul()
+        return mul.forward(self, other)
         
-    def __getitem__(self, index: int) -> 'Tensor':
-        return Tensor(self.items[index])
-
-    def __radd__(self, other: Any) -> 'Tensor':
+    def __pow__(self, other: int | float) -> 'Tensor':
+        from autogradik.functions import Pow
+        pow = Pow()
+        return pow.forward(self, other)
+    
+    def __sub__(self, other) -> 'Tensor':
+        from autogradik.functions import Sub
+        sub = Sub()
+        return sub.forward(self, other)
+    
+    def __truediv__(self, other) -> 'Tensor':
+        from autogradik.functions import Div
+        div = Div()
+        return div.forward(self, other)
+    
+    def __matmul__(self, other) -> 'Tensor':
+        from autogradik.functions import Matmul
+        matmul = Matmul()
+        return matmul.forward(self, other)
+    
+    def sum(self) -> 'Tensor':
+        from autogradik.functions import Sum
+        return Sum().forward(self)
+    
+    def __radd__(self, other) -> 'Tensor':
         return self + other
-
-    def __rmul__(self, other: Any) -> 'Tensor':
+    
+    def __rmul__(self, other) -> 'Tensor':
         return self * other
     
-    def __rmatmul__(self, other: Any) -> 'Tensor':
-        return self @ other
+    def __eq__(self, other):
+        if isinstance(other, Tensor):
+            return np.equal(self.items, other.items)
+        return False
     
     def __hash__(self):
-        return self._id
+        return id(self)
     
-    @property
-    def T(self) -> 'Tensor':
-        return Tensor(self.items.T)
-    
+    def backward(self):
+        topo = []
+        visited = set()
+        def build_topo(v):
+            if v not in visited and v.requires_grad:
+                visited.add(v)
+                for child in v.prev:
+                    build_topo(child)
+                topo.append(v)
+        build_topo(self)
+
+        self.grad = np.ones_like(self.items, dtype=np.float64)
+
+        # stdout = [v.name for v in reversed(topo)]
+        # print(f"TOPO: {stdout}; {[v.function for v in reversed(topo)]}")
+        for v in reversed(topo):
+            if v.function is None:
+                continue
+            v.function.backward()
+            
+
     @property
     def shape(self) -> Tuple:
         return self.items.shape
 
+    @property
+    def T(self) -> 'Tensor':
+        return Tensor(self.items.T)
+
     def __repr__(self):
         return f"torchok.Tensor({self.items})"
-    
-    def astype(self, dtype):
-        self.items = self.items.astype(dtype)
-        return self
-    
-    def sum(self, axis=None) -> 'Tensor':
-        return Tensor(np.sum(self.items, axis=axis))
-    
-    def backward(self):
-        self.grad = Tensor(np.ones(self.shape))
-
-        visited = set()
-        topo = []
-
-        def _build_topo(tensor):
-            if tensor not in visited:
-                visited.add(tensor)
-                for parent in tensor.parents:
-                    _build_topo(parent)
-                topo.append(tensor)
-        _build_topo(self)
-
-        topo.reverse()
-
-        for tensor in topo:
-            if tensor.function is None or not tensor.parents:
-                continue
-
-            
-            parent_grads = tensor.function.backward(tensor.grad, *tensor.parents)
-
-            
-            for parent, p_grad in zip(tensor.parents, parent_grads):
-                if parent.requires_grad:
-                    if parent.grad is None:
-                        parent.grad = p_grad
-                    else:
-                        parent.grad += p_grad
-
-
-"""a = Tensor([1, 2, 3], requires_grad=True)
-b = 3
-x = a ** b
-x.grad = Tensor(np.ones(x.shape))
-der_a = x.function.backward(x.grad, *x.parents)
-print(der_a)"""

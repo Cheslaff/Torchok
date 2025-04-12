@@ -89,9 +89,88 @@ plt.show()
 ```
 Result:<br>
 <img src="https://i.ibb.co/fVKKx56j/2025-04-11-185732.png" width=50%>
-### Aftermath
+### Final Thoughts
 Well... It was tough. 8 hours of non-stop programming, debugging and rick and morty playing in the background.<br>
 Definitely worth it!<br>
+
+## 12.04.2025:
+### Overview
+Non-linearities, `nn` lib, layers, loss functions and more!
+### Non-linearities
+Simple Non-linearities added to `autogradik.functions` and to `torchok.Tensor`.<br>
+### `nn`
+Neural Network library prototype. Module class in `nn.module`, layers `Linear`, `ReLU`, `Tanh`, `Sigmoid`, `Softmax`, `LReLU`.
+```python
+class Linear(nn.Module):
+    def __init__(self, fan_in, fan_out, bias=True):
+        super().__init__()
+        self.W = torchok.randn(fan_in, fan_out, requires_grad=True) / (fan_in)**0.5
+        self.b = torchok.randn(fan_out, requires_grad=True) * 0.1 if bias else None
+
+    def forward(self, x):
+        out = x @ self.W
+        if self.b is not None:
+            out += self.b
+        return out
+```
+### Example usage now
+```python
+import torchok
+from torchok.nn import Linear, ReLU, MSELoss
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Data Creation
+X  =  torchok.randn(1_000, 1)
+y = 0.1 * X**7 - 0.5 * X**6 + 3 * X**5 - 5 * X**4 + 0.3 * X**3 + 2 * X**2 - 4 * X + 10
+
+# Preparation
+lr  =  0.000001
+loss_fn = MSELoss()
+layers = [
+	Linear(1, 30),
+	ReLU(),
+	Linear(30, 1)
+]
+parameters = []
+for layer in layers:
+	parameters.extend(layer._parameters)
+
+# Training
+for  epoch  in  range(10_000):
+	h = X
+	for layer in layers:
+		h = layer(h)
+	
+	loss  = loss_fn(h, y)
+	# Optimization
+	for  parameter  in  parameters:
+		parameter.grad =  np.zeros_like(parameter.items, dtype=np.float64)
+	loss.backward()
+	for  parameter  in  parameters:
+		parameter.items +=  -lr  *  parameter.grad  # update
+	print(loss.items.mean())
+
+
+# Prediction
+y_hat = X
+for layer in layers:
+	y_hat = layer(y_hat)
+
+# Plot result
+x_sorted = X.items.flatten()
+y_hat_sorted = y_hat.items.flatten()
+idx = np.argsort(x_sorted)
+
+plt.scatter(X.items, y.items)
+plt.plot(x_sorted[idx], y_hat_sorted[idx], c="red")
+plt.show()
+
+```
+Result:<br>
+<img src="https://i.ibb.co/ZpkmL7Vb/2025-04-12-133427.png" width=50%>
+### Final Thoughts
+It was just great!<br>
 
 ---
 

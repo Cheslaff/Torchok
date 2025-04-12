@@ -1,7 +1,10 @@
 import torchok
-from torchok.nn import Linear, ReLU, MSELoss
+from torchok import Tensor
+from torchok.nn import Linear, ReLU, Softmax, CrossEntropyLoss
 import matplotlib.pyplot as plt
 import numpy as np
+
+# Regression Task
 
 # Data Creation
 X  =  torchok.randn(1_000, 1)

@@ -38,39 +38,47 @@ class Tensor:
         self.name = name
 
     def __add__(self, other: Union[int, float, 'Tensor']) -> 'Tensor':
-        from autogradik.functions import Add
+        from torchok.autogradik.functions import Add
         add = Add()
         return add.forward(self, other)
     
     def __mul__(self, other: Union[int, float, 'Tensor']) -> 'Tensor':
-        from autogradik.functions import Mul
+        from torchok.autogradik.functions import Mul
         mul = Mul()
         return mul.forward(self, other)
         
     def __pow__(self, other: Union[int, float]) -> 'Tensor':
-        from autogradik.functions import Pow
+        from torchok.autogradik.functions import Pow
         pow = Pow()
         return pow.forward(self, other)
     
     def __sub__(self, other: Union[int, float, 'Tensor']) -> 'Tensor':
-        from autogradik.functions import Sub
+        from torchok.autogradik.functions import Sub
         sub = Sub()
         return sub.forward(self, other)
     
     def __truediv__(self, other: Union[int, float, 'Tensor']) -> 'Tensor':
-        from autogradik.functions import Div
+        from torchok.autogradik.functions import Div
         div = Div()
         return div.forward(self, other)
     
     def __matmul__(self, other: 'Tensor') -> 'Tensor':
-        from autogradik.functions import Matmul
+        from torchok.autogradik.functions import Matmul
         matmul = Matmul()
         return matmul.forward(self, other)
     
+    def __getitem__(self, index):
+        return Tensor(self.items[index])
+    
     def sum(self) -> 'Tensor':
-        from autogradik.functions import Sum
+        from torchok.autogradik.functions import Sum
         sum_ = Sum()
         return sum_.forward(self)
+    
+    def log(self) -> 'Tensor':
+        from torchok.autogradik.functions import Log
+        log = Log()
+        return log.forward(self)
     
     def __radd__(self, other) -> 'Tensor':
         return self + other
@@ -108,22 +116,22 @@ class Tensor:
     
     # Activation Functions
     def relu(self):
-        from autogradik.functions import ReLU
+        from torchok.autogradik.functions import ReLU
         relu = ReLU()
         return relu.forward(self)
     
     def lrelu(self):
-        from autogradik.functions import LReLU
+        from torchok.autogradik.functions import LReLU
         lrelu = LReLU()
         return lrelu.forward(self)
     
     def sigmoid(self):
-        from autogradik.functions import Sigmoid
+        from torchok.autogradik.functions import Sigmoid
         sigmoid = Sigmoid()
         return sigmoid.forward(self)
     
     def tanh(self):
-        from autogradik.functions import Tanh
+        from torchok.autogradik.functions import Tanh
         tanh = Tanh()
         return tanh.forward(self)
 

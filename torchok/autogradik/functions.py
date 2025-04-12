@@ -156,6 +156,25 @@ class Sum:
         return "Sum"
     
 
+class Log:
+    def forward(self, a):
+        from torchok.tensor import Tensor
+        self.a = a
+        self.out = Tensor(np.log(a.items))
+        if a.requires_grad:
+            self.out.prev = (a,)
+            self.out.function = self
+            self.out.requires_grad = True
+        return self.out
+
+    def backward(self):
+        if self.a.requires_grad:
+            self.a.grad += (1 / self.a.items) * self.out.grad
+
+    def __repr__(self):
+        return "Sum"
+    
+
 # Activation Functions
 class ReLU:
     def forward(self, a):

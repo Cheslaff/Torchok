@@ -11,3 +11,12 @@ class MSELoss(nn.Module):
     def __call__(self, pred, y):
         loss  = (pred  -  y) **  2
         return loss
+
+
+class CrossEntropyLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, pred, y):
+        loss  = - 1 * y * pred.log()
+        return loss

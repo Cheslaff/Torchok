@@ -169,6 +169,12 @@ plt.show()
 ```
 Result:<br>
 <img src="https://i.ibb.co/ZpkmL7Vb/2025-04-12-133427.png" width=50%>
+
+### Demo Digits
+Succesfully works on `sklearn.load_digits()`.
+See `digits_demo.py`<br>
+<img src="https://scikit-learn.org/stable/_images/sphx_glr_plot_lle_digits_thumb.png" widht=30%>
+
 ### Final Thoughts
 It was just great!<br>
 

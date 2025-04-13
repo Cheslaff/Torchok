@@ -1,5 +1,6 @@
 from torchok import Tensor
-from torchok.nn import Linear, ReLU, Softmax, CrossEntropyLoss
+from torchok.nn import Linear, ReLU, CEWithLogitsLoss, Module, BatchNorm1d
+from torchok.optim import Adam, RMSprop, SGD
 
 from sklearn.datasets import load_digits
 import matplotlib.pyplot as plt
@@ -14,46 +15,50 @@ y[np.arange(y.shape[0]), y_] =1
 y = Tensor(y)
 
 
-lr = 0.0003
-loss_fn = CrossEntropyLoss()
-net = [
-    Linear(64, 30),
-    ReLU(),
-    Linear(30, 30),
-    ReLU(),
-    Linear(30, 10),
-    Softmax()
-]
-parameters = []
-for layer in net:
-	parameters.extend(layer._parameters)
+loss_fn = CEWithLogitsLoss()
 
-
-for epoch in range(1_000):
-	h = X
-	for layer in net:
-		h = layer(h)
+class Net(Module):
+	def __init__(self):
+		super().__init__()
+		self.l1 = Linear(64, 30)
+		self.b1 = BatchNorm1d(30)
+		self.l2 = ReLU()
+		self.l3 = Linear(30, 30)
+		self.b2 = BatchNorm1d(30)
+		self.l4 = ReLU()
+		self.l5 = Linear(30, 10)
 	
-	loss = loss_fn(h, y)
-	for parameter in parameters:
-		parameter.grad = np.zeros_like(parameter.items, dtype=np.float64)
+	def forward(self, x):
+		return self.l5(self.l4(self.b2(self.l3(self.l2(self.b1(self.l1(x)))))))
+
+net = Net()
+net.train()
+optimizer = Adam(params=net.parameters(), lr=0.001)
+
+for epoch in range(15_000):
+	batch = np.random.randint(0, X.shape[0], size=(32,))
+	X_batch = X[batch]
+	y_batch = y[batch]
+	
+	out = net(X_batch)
+	loss = loss_fn(out, y_batch)
+	# optimization!
+	optimizer.zero_grad()
 	loss.backward()
-	for parameter in parameters:
-		parameter.items += -lr * parameter.grad
+	optimizer.step()
+
 	print(loss.items.mean())
 
 
+net.eval()
 predictions = []
-
 X_testing = X[:5]
+out = net(X_testing)
 
-out = X_testing
-for layer in net:
-	out = layer(out)
+out = out.softmax()
 
 for probas in out.items:
 	predictions.append(probas.argmax())
-
 for i in range(5):
 	plt.title(f"Actual: {y_[i]} Prediction: {predictions[i]}")
 	plt.imshow(X_testing.items[i].reshape(8, 8), cmap="gray")

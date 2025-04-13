@@ -30,7 +30,7 @@ class Tensor:
         >>> (tensor + arr) * scalar  # torchok.Tensor([4.2 7.  9.8])
     """
     def __init__(self, items:ArrayLike, requires_grad:bool=False, name:str=""):
-        self.items = np.array(items) if isinstance(items, list) else items
+        self.items = np.array(items) if isinstance(items, (list, float, int)) else items
         self.prev = set()
         self.requires_grad = requires_grad
         self.grad = np.zeros_like(items, dtype=np.float64)
@@ -70,10 +70,18 @@ class Tensor:
     def __getitem__(self, index):
         return Tensor(self.items[index])
     
-    def sum(self) -> 'Tensor':
+    def sum(self, dim=None, keepdims=False) -> 'Tensor':
         from torchok.autogradik.functions import Sum
         sum_ = Sum()
-        return sum_.forward(self)
+        return sum_.forward(self, dim, keepdims)
+    
+    def mean(self, dim=None, keepdims=False) -> 'Tensor':
+        divisor = np.prod(self.items.shape) if dim is None else self.items.shape[dim]
+        return self.sum(dim, keepdims) / divisor
+    
+    def std(self, dim=None, keepdims=False) -> 'Tensor':
+        var = ((self - self.mean(dim, keepdims)) ** 2).mean(dim, keepdims)
+        return var ** 0.5
     
     def log(self) -> 'Tensor':
         from torchok.autogradik.functions import Log
@@ -93,6 +101,11 @@ class Tensor:
     
     def __hash__(self):
         return id(self)
+    
+    def abs(self):
+        from torchok.autogradik.functions import Abs
+        abs_ = Abs()
+        return abs_.forward(self)
     
     def backward(self):
         topo = []
@@ -134,6 +147,11 @@ class Tensor:
         from torchok.autogradik.functions import Tanh
         tanh = Tanh()
         return tanh.forward(self)
+    
+    def softmax(self):
+        from torchok.autogradik.functions import Softmax
+        softmax = Softmax()
+        return softmax.forward(self)
 
     # Properties
     @property

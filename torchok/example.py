@@ -1,6 +1,6 @@
 import torchok
 from torchok import Tensor
-from torchok.nn import Linear, ReLU, Softmax, CrossEntropyLoss
+from torchok.nn import Linear, ReLU, MSELoss
 import matplotlib.pyplot as plt
 import numpy as np
 

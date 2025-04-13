@@ -16,6 +16,31 @@ class Linear(nn.Module):
             out += self.b
         return out
 
+class BatchNorm1d(nn.Module):
+    def __init__(self, dim, eps=1e-5, momentum=0.1):
+        super().__init__()
+        self.eps = eps
+        self.momentum = momentum
+        self.training = True
+        self.gamma = torchok.ones(dim)
+        self.beta = torchok.zeros(dim)
+        self.running_mean = torchok.zeros(dim)
+        self.running_std = torchok.ones(dim)
+
+    def forward(self, x):
+        if self.training:
+            mean_x = x.mean(0, keepdims=True)
+            std_x = x.std(0, keepdims=True)
+        else:
+            mean_x = self.running_mean
+            std_x = self.running_std
+        x_hat = (x - mean_x) / (std_x + self.eps)
+        self.out = self.gamma * x_hat + self.beta
+        if self.training:
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean_x
+            self.running_std = (1 - self.momentum) * self.running_std + self.momentum * std_x
+        return self.out
+
 
 class ReLU(nn.Module):
     def __init__(self):

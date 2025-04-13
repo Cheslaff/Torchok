@@ -9,6 +9,7 @@ minitorch/minitorch<br>
 geohot/tinygrad
 </p>
 <p align="center">
+<p  align="center"><h3  align="center">V 1.0❤️‍🔥</h3></p>
 <h3 align="center">Work in progress</h3><br>
-experimental features are in `experimental` branch
+<p align="center">experimental features are in `experimental` branch</p>
 </p>

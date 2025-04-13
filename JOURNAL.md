@@ -178,6 +178,85 @@ See `digits_demo.py`<br>
 ### Final Thoughts
 It was just great!<br>
 
+## 13.04.2025:
+### Overview
+Optimizers, BatchNorm, Module updates, Functions improved!
+### `torchok.optim`
+New branch of torchok project! `torchok.optim` finally delivered!<br>
+Torchok is a small scale project, so it has only 3 essential optimizers:<br>
+
+- `SGD` supports momentum; depends on batch size
+- `RMSprop` smart learning rate scaling
+- `Adam` mix of `RMSprop` and momentum `SGD`
+
+Now instead of suffering, optimizing parameters by hand just call `optimizer.step()` (But don't forget to `optimizer.zero_grad()` before `loss.backward()`😆)
+
+Example training loop:
+```python
+net = Net()  # inherits nn.Module
+net.train()  # Model state controllers
+optimizer = Adam(params=net.parameters(), lr=0.001)
+
+for epoch in range(15_000):
+	batch = np.random.randint(0, X.shape[0], size=(32,))
+	X_batch = X[batch]
+	y_batch = y[batch]
+	
+	out = net(X_batch)
+	loss = loss_fn(out, y_batch)
+	# optimization!
+	optimizer.zero_grad()
+	loss.backward()
+	optimizer.step()
+
+	print(loss.items.mean())
+```
+
+### Batch Norm 1d
+New layer for Batch normalization with automatic mean and std running average waiting for you in `torchok.nn.layers.py`.<br>
+Network interspersed with BN1d layers:
+```python
+class Net(Module):
+	def __init__(self):
+		super().__init__()
+		self.l1 = Linear(64, 30)
+		self.b1 = BatchNorm1d(30)
+		self.l2 = ReLU()
+		self.l3 = Linear(30, 30)
+		self.b2 = BatchNorm1d(30)
+		self.l4 = ReLU()
+		self.l5 = Linear(30, 10)
+	
+	def forward(self, x):
+		return self.l5(self.l4(self.b2(self.l3(self.l2(self.b1(self.l1(x)))))))
+```
+### `Module` tweaks
+Now module has `.train()` and `.eval()` states.<br>
+It affects `requires_grad` of parameters and `training` attribute of submodules (if one exists).<br>
+Frankly speaking, it's a bit wrong, since `.eval()` should change only `training` state of submodules not touching `requires_grad`<br>
+
+```python
+net.eval()  # affects Batch Normalization
+predictions = []
+X_testing = X[:5]
+out = net(X_testing)
+
+out = out.softmax()
+```
+
+### `autogradik.functions` fixed
+Now operators in autogradik resolve all sorts of shape mismatches becoming more robust.
+
+## Attention!❤️‍🔥
+With 660 lines of python and with only one dependency (numpy) **Torchok V1.0** releases!<br>
+V1.0 covers minimal neural network pipeline with PyTorch-like syntax!<br>
+
+Planning to drop on PyPi<br>
+<img src="https://minecraft.wiki/images/Torch.gif?462d6" widht=30%>
+
+### Final Thoughts
+Unforgettable Project!<br>
+
 ---
 
 ### Why?

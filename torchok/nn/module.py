@@ -21,6 +21,9 @@ class Module:
     def add_parameter(self, param):
         self._parameters.append(param)
 
+    def add_module(self, name, module):
+        self.submodules[name] = module
+
     # Essential!
     def __setattr__(self, name, value):
         if isinstance(value, Module):
@@ -31,6 +34,26 @@ class Module:
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError("forward() not implemented yet")
+    
+    def train(self):
+        for p in self.parameters():
+            p.requires_grad = True
+        
+        for attr in self.__dict__.values():
+            if isinstance(attr, Module):
+                attr.train()
+        if hasattr(self, 'training'):
+            self.training = True
+
+    def eval(self):
+        for p in self.parameters():
+            p.requires_grad = False
+
+        for attr in self.__dict__.values():
+            if isinstance(attr, Module):
+                attr.eval()
+        if hasattr(self, 'training'):
+            self.training = False
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
